@@ -1,4 +1,8 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var socket = io();
+    window.socket = io();
+    socket.emit('playerJoined', 'Andy');
+    socket.on('tick', function(msg){
+        console.log(msg);
+    });
 </script>
