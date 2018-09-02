@@ -5,7 +5,7 @@ const io = require('socket.io')(http);
 const state = {
     players: [],
     readyPlayers: [],
-    action: [],
+    board: []
 };
 
 const buffer = {
@@ -16,6 +16,7 @@ io.on('connection', function(socket){
     socket.on('playerJoined', function (msg) {
         state.players[socket.id] = msg;
         state.readyPlayers[socket.id] = false;
+        io.emit('tick', state);
         console.log(state.players);
     });
 
@@ -29,10 +30,26 @@ io.on('connection', function(socket){
     });
 });
 
-setInterval(function () {
+const interval = setInterval(function () {
+    if (gameStart()){
+        state = initState()
+        io.emit('tick', 'gameStart');
+    }
+    if (gameEnd()){
+        io.emit('tick', 'gameEnd');
+        clearInterval(interval);
+    }
     bufferToState();
     io.emit('tick', state);
 }, 500);
+
+function initState() {
+
+}
+
+function bufferToState() {
+
+}
 
 app.get('/', function(req, res){
     res.sendFile(__dirname + '/index.html');
