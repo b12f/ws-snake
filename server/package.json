@@ -9,6 +9,7 @@
   "author": "",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "express": "^4.15.2"
+    "express": "^4.15.2",
+    "socket.io": "^2.1.1"
   }
 }
