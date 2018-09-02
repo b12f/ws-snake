@@ -4,23 +4,33 @@ const io = require('socket.io')(http);
 
 const state = {
     players: [],
+    readyPlayers: [],
     action: [],
-    
+};
+
+const buffer = {
+    actions: []
 };
 
 io.on('connection', function(socket){
     socket.on('playerJoined', function (msg) {
         state.players[socket.id] = msg;
+        state.readyPlayers[socket.id] = false;
         console.log(state.players);
     });
 
-    socket.on('playerAction', function (msg) {
-        state.players.push(msg);
+    socket.on('playerReady', function () {
+        state.readyPlayers[socket.id] = true;
         console.log(state.players);
+    });
+
+    socket.on('playerAction', function (msg){
+        buffer.actions[socket.id] = msg;
     });
 });
 
 setInterval(function () {
+    bufferToState();
     io.emit('tick', state);
 }, 500);
 
