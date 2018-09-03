@@ -86,6 +86,8 @@ function gameTick() {
             player.ready = false;
             return player;
         });
+
+        return;
     }
 
     // Emit the tick with the board state to all players,
