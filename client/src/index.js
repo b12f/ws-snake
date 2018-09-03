@@ -8,11 +8,14 @@ const rl = readline.createInterface({
 });
 
 console.log('Connecting to server...');
-const socket = io('http://localhost/');
+const socket = io('http://localhost:3000/');
 
-let me = null;
-const players = [];
-let board = null;
+const state = {
+    board: null,
+    running: false,
+    players: [],
+    me: null,
+};
 
 function renderGame() {
 
@@ -26,7 +29,7 @@ async function getName() {
     let name;
     do {
         name = await new Promise(resolve => {
-            rl.question('What\'s your name?', (input) => {
+            rl.question('What\'s your name?\n', (input) => {
                 rl.close();
                 resolve(input);
             });
@@ -39,12 +42,12 @@ async function getName() {
 async function main() {
     const name = await getName();
     console.log(`Your name is ${name}`);
-    socket.emit('playerJoined', name);
-    me = {
-        name,
-        ready: false,
-    };
-    players.push(me);
+    socket.emit('playerJoined', name, (data) => {
+        state.players = data.players;
+        state.running = data.running;
+        state.board = data.board;
+        state.me = state.players.find(player => player.name === name);
+    });
 }
 
 socket.on('connect', () => {
@@ -53,7 +56,7 @@ socket.on('connect', () => {
 });
 
 socket.on('playerJoined', (name, ready) => {
-    players.push({
+    state.players.push({
         name,
         ready,
     });
