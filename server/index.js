@@ -26,15 +26,18 @@ function getInitialBoardState() {
 }
 
 io.on('connection', function(socket){
+    let player;
     socket.on('playerJoined', function (name, callback) {
         console.log(`Player ${name} joined`);
 
-        // Add the player to the state
-        state.players.push({
+        player = {
             name,
             id: socket.id,
             ready: false,
-        });
+        };
+
+        // Add the player to the state
+        state.players.push(player);
 
         // Broadcast this to all other players
         socket.broadcast.emit('playerJoined', name);
@@ -44,22 +47,30 @@ io.on('connection', function(socket){
     });
 
     socket.on('playerReady', function () {
-        // Get the current player and ready them up
-        const player = state.players.find(player => player.id === socket.id);
         player.ready = true;
-
         console.log(`Player ${player.name} is ready`);
 
         // Broadcast this to all other players
         socket.broadcast.emit('playerReady', player.name);
 
-        if (state.players.reduce((allReady, player) => allReady && player.ready, true)) {
+        if (state.players.reduce((allReady, p) => allReady && p.ready, true)) {
             startGame();
         }
     });
 
     socket.on('directionUpdate', function (direction){
         buffer.directions[socket.id] = direction;
+    });
+
+    socket.on('disconnect', () => {
+        for (let i = 0; i < state.players.length; i++) {
+            if (player === state.players[i]) { 
+                state.players.splice(i, 1);
+                console.log(`Player ${player.name} disconnected`);
+                socket.broadcast.emit('playerLeft', player.name);
+                break;
+            }
+        }
     });
 });
 
@@ -71,13 +82,17 @@ function startGame() {
     io.sockets.emit('gameStart', state.board);
 
     // Start the game interval
-    state.interval = setInterval(gameTick, GAME_TICK_SPEED);
+    setTimeout(() => {
+        console.log('Game is starting in 3 seconds');
+        state.interval = setInterval(gameTick, GAME_TICK_SPEED);
+    }, 3000);
 }
 
 function gameTick() {
     // TODO: Update the board here
 
     // TODO: Make this more than example code
+    const gameOver = false;
     if (gameOver) {
         clearInterval(state.interval);
         io.sockets.emit('gameEnd');
