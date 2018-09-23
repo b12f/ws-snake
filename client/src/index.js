@@ -37,9 +37,8 @@ function getPlayerColor(id) {
 
 function renderGame() {
     const board = Array(state.board.height)
-        .fill(Array(state.board.width)
-            .fill(' ')
-        );
+        .fill(null)
+        .map(() => Array(state.board.width).fill(' '));
 
     const ids = Object.keys(state.board.snakes);
     for (let i = 0; i < ids.length; i++) {
