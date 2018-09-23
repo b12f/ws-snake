@@ -52,7 +52,7 @@ function renderGame() {
     }
 
     // Clear the terminal
-    // process.stdout.write('\033c');
+    process.stdout.write('\033c');
     console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
     for (let i = 0; i < board.length; i++) {
         console.log(colors.bgWhite(' ') + board[i].join('') + colors.bgWhite(' '));
