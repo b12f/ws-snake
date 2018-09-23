@@ -1,5 +1,6 @@
 const io = require('socket.io-client');
 const readline = require('readline');
+const colors = require('colors/safe');
 
 console.log('Connecting to server...');
 const socket = io('http://localhost:3000/');
@@ -8,6 +9,15 @@ const rl = readline.createInterface({
     output: process.stdout,
 });
 
+const availableColors = [
+    'bgRed',
+    'bgGreen',
+    'bgYellow',
+    'bgBlue',
+    'bgMagenta',
+    'bgCyan',
+];
+
 const state = {
     board: null,
     running: false,
@@ -15,8 +25,39 @@ const state = {
     me: null,
 };
 
-function renderGame() {
+function getPlayerColor(id) {
+    for (let i = 0; i < state.players.length; i++) {
+        if (state.players[i].id === id) {
+            return colors[availableColors[i]];
+        }
+    }
 
+    return colors.green;
+}
+
+function renderGame() {
+    const board = Array(state.board.height)
+        .fill(Array(state.board.width)
+            .fill(' ')
+        );
+
+    const ids = Object.keys(state.board.snakes);
+    for (let i = 0; i < ids.length; i++) {
+        const playerId = ids[i];
+        const color = getPlayerColor(playerId);
+        for (let i = 0; i < state.board.snakes[playerId].length; i++) {
+            const position = state.board.snakes[playerId][i];
+            board[position.y][position.x] = color(i === 0 ? 'x' : ' ');
+        }
+    }
+
+    // Clear the terminal
+    process.stdout.write('\033c');
+    console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
+    for (const line in board) {
+        console.log(colors.bgWhite(' ') + line.join('') + colors.bgWhite(' '));
+    }
+    console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
 }
 
 function renderLobby() {
@@ -24,22 +65,24 @@ function renderLobby() {
         return;
     }
 
-    console.log('\n\n= Players ==========');
+    console.log(colors.bgBlue.black('\n\n= Players =======================================\n'));
     for (let i = 0; i < state.players.length; i++) {
         const player = state.players[i];
         let line = player.name;
         if (player.ready) {
-            line += ' ready';
+            line += colors.green(' ready');
         } else {
-            line += ' waiting';
+            line += colors.yellow(' waiting');
         }
         console.log(line);
     }
 
+    console.log(colors.bgBlue.black('\n================================================='));
+
     if (state.me.ready) {
         console.log('\nYou are ready. Waiting for the rest.');
     } else {
-        console.log('\nPress Enter to ready up');
+        console.log(colors.bgYellow.black('\nPress Enter to ready up'));
     }
 }
 
@@ -118,6 +161,11 @@ async function main() {
 socket.on('connect', () => {
     console.log('Connected to server');
     main();
+});
+
+socket.on('disconnect', () => {
+    console.log(colors.bgRed.black('Disconnected from server'));
+    console.log('Waiting to reconnect...');
 });
 
 socket.on('playerJoined', (name, ready) => {

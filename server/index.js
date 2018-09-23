@@ -83,10 +83,10 @@ function startGame() {
     
     // Emit the game start with the board state to all players
     io.sockets.emit('gameStart', state.board);
+    console.log('Game is starting in 3 seconds');
 
     // Start the game interval
     setTimeout(() => {
-        console.log('Game is starting in 3 seconds');
         state.interval = setInterval(gameTick, GAME_TICK_SPEED);
     }, 3000);
 }
