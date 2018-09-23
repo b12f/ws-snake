@@ -20,10 +20,10 @@ class Position {
 			return new Position(this.x - 1, this.y);
 		}
 		if (direction === 'up') {
-			return new Position(this.x, this.y + 1);
+			return new Position(this.x, this.y - 1);
 		}
 		if (direction === 'down') {
-			return new Position(this.x, this.y - 1);
+			return new Position(this.x, this.y + 1);
 		}
 	}
 }

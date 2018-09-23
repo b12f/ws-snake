@@ -126,9 +126,15 @@ function updateBoard(currentState) {
 }
 
 function moveSnake(direction, snake) {
-    console.log(snake);
+    const isFruit = checkCollision(snake[0].nextField(direction));
     snake.unshift(snake[0].nextField(direction));
-    snake.pop();
+    if (!isFruit) {
+        snake.pop();
+    }
+}
+
+function checkCollision(position){
+    return state.board.fruit.equals(position);
 }
 
 function initState() {
