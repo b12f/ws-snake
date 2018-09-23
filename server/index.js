@@ -96,6 +96,7 @@ function gameTick() {
 
     // TODO: Make this more than example code
     const gameOver = false;
+    const events = [];
     if (gameOver) {
         clearInterval(state.interval);
         io.sockets.emit('gameEnd');
@@ -131,10 +132,10 @@ function initState() {
         const modifier = i % 2 ? 1 : -1;
         let y = i % 2 ? verticalMargin : state.board.height - verticalMargin;
         let maxY = i % 2 ? state.board.height - verticalMargin : verticalMargin;
-        state.board.snakes[player.id] = [];
+        state.board.snakes[state.players[i].id] = [];
 
         for (; (i % 2 ? y < maxY : y > maxY); y += modifier) {
-            state.board.snakes[player.id].push(
+            state.board.snakes[state.players[i].id].push(
                 new Position(
                     x, y
                 )
@@ -152,7 +153,7 @@ function getFreePosition(board) {
     do {
         y = Math.floor(Math.random() * board.height);
         x = Math.floor(Math.random() * board.width);
-    } while(isFreePosition(new Position(x, y)))
+    } while(isFreePosition(board, new Position(x, y)))
     return new Position(x, y);
 }
 
@@ -162,7 +163,7 @@ function isFreePosition(board, position) {
     }
 
     for(const snake in board.snakes) {
-        for(const snakePosition of snake) {
+        for(const snakePosition of board.snakes[snake]) {
             if (snakePosition.equals(position)) {
                 return false;
             }
