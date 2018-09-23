@@ -17,13 +17,10 @@ const buffer = {
     directions: {},
 };
 
-function getBoardState() {
+function getGameState() {
     return {
         running: state.running,
-        players: state.players.map(p =>({
-            name: p.name,
-            ready: p.ready,
-        })),
+        players: state.players,
         board: state.board,
     };
 }
@@ -43,10 +40,13 @@ io.on('connection', function(socket){
         state.players.push(player);
 
         // Broadcast this to all other players
-        socket.broadcast.emit('playerJoined', name);
+        socket.broadcast.emit('playerJoined', player);
 
         // Send an initial dataset to the joining player
-        callback(getBoardState());
+        callback({
+            id: socket.id, 
+            state: getGameState(),
+        });
     });
 
     socket.on('playerReady', function () {

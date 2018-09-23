@@ -45,17 +45,18 @@ function renderGame() {
     for (let i = 0; i < ids.length; i++) {
         const playerId = ids[i];
         const color = getPlayerColor(playerId);
-        for (let i = 0; i < state.board.snakes[playerId].length; i++) {
-            const position = state.board.snakes[playerId][i];
-            board[position.y][position.x] = color(i === 0 ? 'x' : ' ');
+        const snake = state.board.snakes[playerId]
+        for (let j = 0; j < snake.length; j++) {
+            const position = snake[j];
+            board[position.y][position.x] = color(j === 0 ? 'x' : ' ');
         }
     }
 
     // Clear the terminal
-    process.stdout.write('\033c');
+    // process.stdout.write('\033c');
     console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
-    for (const line in board) {
-        console.log(colors.bgWhite(' ') + line.join('') + colors.bgWhite(' '));
+    for (let i = 0; i < board.length; i++) {
+        console.log(colors.bgWhite(' ') + board[i].join('') + colors.bgWhite(' '));
     }
     console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
 }
@@ -146,10 +147,10 @@ function enableTTYRawMode() {
 async function main() {
     const name = await getName();
     await new Promise(resolve => socket.emit('playerJoined', name, (data) => {
-        state.players = data.players;
-        state.running = data.running;
-        state.board = data.board;
-        state.me = state.players.find(player => player.name === name);
+        state.players = data.state.players;
+        state.running = data.state.running;
+        state.board = data.state.board;
+        state.me = state.players.find(player => player.id === data.id);
         renderLobby();
         resolve();
     }));
@@ -168,11 +169,8 @@ socket.on('disconnect', () => {
     console.log('Waiting to reconnect...');
 });
 
-socket.on('playerJoined', (name, ready) => {
-    state.players.push({
-        name,
-        ready,
-    });
+socket.on('playerJoined', (player) => {
+    state.players.push(player);
 
     renderLobby();
 });
@@ -200,13 +198,14 @@ socket.on('playerReady', (name) => {
     renderLobby();
 });
 
-socket.on('gameStart', (update) => {
+socket.on('gameStart', (board) => {
     console.log('Game is starting in 3 seconds');
-    board = update;
+    state.board = board;
+    renderGame();
 });
 
-socket.on('gameTick', (update) => {
-    board = update.state;
+socket.on('gameTick', (board, events) => {
+    state.board = board;
 });
 
 socket.on('gameEnd', (winningPlayer) => {
