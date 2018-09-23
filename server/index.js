@@ -119,13 +119,14 @@ function gameTick() {
 function updateBoard(currentState) {
     for (var i = 0; i < currentState.players.length; i++) {
         const currentId = currentState.players[i].id;
-        const direction = currentState.buffer.direction[currentId];
+        const direction = buffer.directions[currentId];
         moveSnake(direction, currentState.board.snakes[currentId]);
     }
     return;
 }
 
 function moveSnake(direction, snake) {
+    console.log(snake);
     snake.unshift(snake[0].nextField(direction));
     snake.pop();
 }
@@ -145,7 +146,12 @@ function initState() {
         
         const x = betweeSpace * (i + 1);
         const modifier = i % 2 ? 1 : -1;
-        let y = i % 2 ? verticalMargin : state.board.height - verticalMargin;
+        let y = verticalMargin;
+        buffer.directions[state.players[i].id] = 'up';
+        if (i % 2) {
+            y = state.board.height - verticalMargin;
+            buffer.directions[state.players[i].id] = 'down';
+        }
         let maxY = i % 2 ? state.board.height - verticalMargin : verticalMargin;
         state.board.snakes[state.players[i].id] = [];
 
