@@ -93,6 +93,7 @@ function startGame() {
 
 function gameTick() {
     // TODO: Update the board here
+    updateBoard(state);
 
     // TODO: Make this more than example code
     const gameOver = false;
@@ -113,6 +114,20 @@ function gameTick() {
     // `events` could be used to share game events like
     // player deaths or fruit spawns for that tick
     io.sockets.emit('gameTick', state.board, events);
+}
+
+function updateBoard(currentState) {
+    for (var i = 0; i < currentState.players.length; i++) {
+        const currentId = currentState.players[i].id;
+        const direction = currentState.buffer.direction[currentId];
+        moveSnake(direction, currentState.board.snakes[currentId]);
+    }
+    return;
+}
+
+function moveSnake(direction, snake) {
+    snake.unshift(snake[0].nextField(direction));
+    snake.pop();
 }
 
 function initState() {
