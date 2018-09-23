@@ -51,6 +51,8 @@ function renderGame() {
         }
     }
 
+    board[state.board.fruit.y][state.board.fruit.x] = colors.green('0');
+
     // Clear the terminal
     process.stdout.write('\033c');
     console.log(colors.bgWhite(Array(state.board.width + 2).fill(' ').join('')));
