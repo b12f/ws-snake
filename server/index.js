@@ -1,8 +1,11 @@
 const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
+const Position = require('./Position');
 
 const GAME_TICK_SPEED = 200;
+const INIT_SNAKE_LENGTH = 5;
+
 const state = {
     running: false,
     players: [],
@@ -14,7 +17,7 @@ const buffer = {
     directions: {},
 };
 
-function getInitialBoardState() {
+function getBoardState() {
     return {
         running: state.running,
         players: state.players.map(p =>({
@@ -43,7 +46,7 @@ io.on('connection', function(socket){
         socket.broadcast.emit('playerJoined', name);
 
         // Send an initial dataset to the joining player
-        callback(getInitialBoardState());
+        callback(getBoardState());
     });
 
     socket.on('playerReady', function () {
@@ -112,7 +115,61 @@ function gameTick() {
 }
 
 function initState() {
+    state.board = {
+        height: 35,
+        width: 130,
+        snakes: {},
+        fruit: new Position(-1, -1)
+    }
 
+    const betweeSpace = Math.floor(state.board.width / (state.players.length + 1));
+    const verticalMargin = Math.floor((state.board.height - INIT_SNAKE_LENGTH) / 2);
+
+    for(let i = 0; i<state.players.length; i++) {
+        
+        const x = betweeSpace * (i + 1);
+        const modifier = i % 2 ? 1 : -1;
+        let y = i % 2 ? verticalMargin : state.board.height - verticalMargin;
+        let maxY = i % 2 ? state.board.height - verticalMargin : verticalMargin;
+        state.board.snakes[player.id] = [];
+
+        for (; (i % 2 ? y < maxY : y > maxY); y += modifier) {
+            state.board.snakes[player.id].push(
+                new Position(
+                    x, y
+                )
+            );
+        }
+    }
+
+    state.board.fruit = getFreePosition(state.board);
+}
+
+function getFreePosition(board) {
+    let x;
+    let y;
+
+    do {
+        y = Math.floor(Math.random() * board.height);
+        x = Math.floor(Math.random() * board.width);
+    } while(isFreePosition(new Position(x, y)))
+    return new Position(x, y);
+}
+
+function isFreePosition(board, position) {
+    if (board.fruit.equals(position)) {
+        return false;
+    }
+
+    for(const snake in board.snakes) {
+        for(const snakePosition of snake) {
+            if (snakePosition.equals(position)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 app.get('/', function(req, res){
