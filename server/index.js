@@ -144,19 +144,20 @@ function initState() {
 
     for(let i = 0; i<state.players.length; i++) {
         
+        const playerId = state.players[i].id;
         const x = betweeSpace * (i + 1);
         const modifier = i % 2 ? 1 : -1;
         let y = verticalMargin;
-        buffer.directions[state.players[i].id] = 'up';
-        if (i % 2) {
+        buffer.directions[playerId] = 'up';
+        if (!(i % 2)) {
             y = state.board.height - verticalMargin;
-            buffer.directions[state.players[i].id] = 'down';
+            buffer.directions[playerId] = 'down';
         }
         let maxY = i % 2 ? state.board.height - verticalMargin : verticalMargin;
-        state.board.snakes[state.players[i].id] = [];
+        state.board.snakes[playerId] = [];
 
         for (; (i % 2 ? y < maxY : y > maxY); y += modifier) {
-            state.board.snakes[state.players[i].id].push(
+            state.board.snakes[playerId].push(
                 new Position(
                     x, y
                 )
