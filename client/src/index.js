@@ -158,6 +158,21 @@ async function main() {
     await waitForReady();
 }
 
+function onArrowKey(key) {
+    if (key == '\u001B\u005B\u0041') {
+        socket.emit('directionUpdate', 'up');
+    }
+    if (key == '\u001B\u005B\u0043') {
+        socket.emit('directionUpdate', 'right');
+    }
+    if (key == '\u001B\u005B\u0042') {
+        socket.emit('directionUpdate', 'down');
+    }
+    if (key == '\u001B\u005B\u0044') {
+        socket.emit('directionUpdate', 'left');
+    }
+}
+
 socket.on('connect', () => {
     console.log('Connected to server');
     main();
@@ -201,13 +216,16 @@ socket.on('gameStart', (board) => {
     console.log('Game is starting in 3 seconds');
     state.board = board;
     renderGame();
+    process.stdin.on('data', onArrowKey);
 });
 
 socket.on('gameTick', (board, events) => {
     state.board = board;
+    renderGame();
 });
 
 socket.on('gameEnd', (winningPlayer) => {
+    process.stdin.off('data', onArrowKey);
     if (winningPlayer === me.name) {
         console.log('You win!');
     } else {
