@@ -3,7 +3,7 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const Position = require('./Position');
 
-const GAME_TICK_SPEED = 200;
+const GAME_TICK_SPEED = 100;
 const INIT_SNAKE_LENGTH = 5;
 
 const state = {
@@ -72,6 +72,7 @@ io.on('connection', function(socket){
                 state.players.splice(i, 1);
                 console.log(`Player ${player.name} disconnected`);
                 socket.broadcast.emit('playerLeft', player.name);
+                state.dead.push(player.id)
                 break;
             }
         }
