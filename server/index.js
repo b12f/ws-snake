@@ -11,6 +11,7 @@ const state = {
     players: [],
     board: null, 
     interval: null,
+    dead: []
 };
 
 const buffer = {
@@ -119,22 +120,47 @@ function gameTick() {
 function updateBoard(currentState) {
     for (var i = 0; i < currentState.players.length; i++) {
         const currentId = currentState.players[i].id;
+        if (currentState.dead.includes(currentId)) {
+            return;
+        }
         const direction = buffer.directions[currentId];
-        moveSnake(direction, currentState.board.snakes[currentId]);
+        moveSnake(currentState, direction, currentState.board.snakes[currentId], currentId);
     }
     return;
 }
 
-function moveSnake(direction, snake) {
-    const isFruit = checkCollision(snake[0].nextField(direction));
+function moveSnake(currentState, direction, snake, currentId) {
+    const collision = checkCollision(currentState, snake[0].nextField(direction));
     snake.unshift(snake[0].nextField(direction));
-    if (!isFruit) {
+    if (!collision.isFruit) {
         snake.pop();
+    } else {
+        refruit(currentState);
+    }
+    if (collision.isWall || collision.isSnake) {
+        currentState.dead.push(currentId);
     }
 }
 
-function checkCollision(position){
-    return state.board.fruit.equals(position);
+function checkCollision(currentState, position){
+    collision = {};
+    collision.isFruit = state.board.fruit.equals(position);
+    if (position.x < 1 || position.y < 1 || position.y >= state.board.height - 1 || position.x >= state.board.width - 1) {
+        collision.isWall = true;
+    }
+
+    for (const snake in currentState.board.snakes) {
+        for (const segment of currentState.board.snakes[snake]) {
+            if(position.equals(segment)) {
+                collision.isSnake = true;
+            }
+        }
+    }
+    return collision;
+}
+
+function refruit(currentState) {
+    currentState.board.fruit = getFreePosition(currentState.board);
 }
 
 function initState() {
@@ -181,7 +207,7 @@ function getFreePosition(board) {
     do {
         y = Math.floor(Math.random() * board.height);
         x = Math.floor(Math.random() * board.width);
-    } while(isFreePosition(board, new Position(x, y)))
+    } while(!isFreePosition(board, new Position(x, y)))
     return new Position(x, y);
 }
 
