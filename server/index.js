@@ -122,7 +122,7 @@ function updateBoard(currentState) {
     for (var i = 0; i < currentState.players.length; i++) {
         const currentId = currentState.players[i].id;
         if (currentState.dead.includes(currentId)) {
-            return;
+            continue;
         }
         const direction = buffer.directions[currentId];
         moveSnake(currentState, direction, currentState.board.snakes[currentId], currentId);
