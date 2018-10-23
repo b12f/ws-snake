@@ -71,7 +71,7 @@ function renderLobby() {
     for (let i = 0; i < state.players.length; i++) {
         const player = state.players[i];
         let line = player.name;
-        if (player.ready) {
+        if (player.status === 'ready') {
             line += colors.green(' ready');
         } else {
             line += colors.yellow(' waiting');
@@ -81,7 +81,7 @@ function renderLobby() {
 
     console.log(colors.bgBlue.black('\n================================================='));
 
-    if (state.me.ready) {
+    if (state.me.status === 'ready') {
         console.log('\nYou are ready. Waiting for the rest.');
     } else {
         console.log(colors.bgYellow.black('\nPress Enter to ready up'));
@@ -117,7 +117,7 @@ function getEnterPress() {
 
 async function waitForReady() {
     await getEnterPress();
-    state.me.ready = true;
+    state.me.status = 'ready';
     socket.emit('playerReady');
     renderLobby();
 }
@@ -132,7 +132,7 @@ function enableTTYRawMode() {
         process.stdin.resume();
 
         // i don't want binary, do you?
-        process.stdin.setEncoding( 'utf8' );
+        process.stdin.setEncoding('utf8');
 
         // on any data into stdin
         process.stdin.on('data', function( key ){
@@ -183,6 +183,9 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
     console.log(colors.bgRed.black('Disconnected from server'));
     console.log('Waiting to reconnect...');
+    rl.close();
+    process.stdin.removeAllListeners('data');
+    process.stdin.setRawMode(false);
 });
 
 socket.on('playerJoined', (player) => {
@@ -206,7 +209,7 @@ socket.on('playerReady', (name) => {
     for (let i = 0; i < state.players.length; i++) {
         if (state.players[i].name === name) {
             console.log(`Player ${name} is ready`);
-            state.players[i].ready = true;
+            state.players[i].status = 'ready';
             break;
         }
     }
@@ -214,11 +217,14 @@ socket.on('playerReady', (name) => {
     renderLobby();
 });
 
-socket.on('gameStart', (board) => {
-    console.log('Game is starting in 3 seconds');
-    state.board = board;
+socket.on('gameStart', (newState) => {
+    state.players = newState.players;
+    state.running = newState.running;
+    state.board = newState.board;
+    state.me = state.players.find(player => player.id === state.me.id);
     renderGame();
     process.stdin.on('data', onArrowKey);
+    console.log('Game is starting in 3 seconds');
 });
 
 socket.on('gameTick', (board, events) => {
@@ -226,16 +232,20 @@ socket.on('gameTick', (board, events) => {
     renderGame();
 });
 
-socket.on('gameEnd', (winningPlayer) => {
+socket.on('gameEnd', (data) => {
+    state.players = data.state.players;
+    state.running = data.state.running;
+    state.board = data.state.board;
+    state.me = state.players.find(player => player.id === state.me.id);
+
+    const winner = state.players.find(p => p.id === data.winner);
     process.stdin.off('data', onArrowKey);
-    if (winningPlayer === me.name) {
+    if (winner.id === state.me.id) {
         console.log('You win!');
     } else {
-        console.log(`${winningPlayer} won!`);
+        console.log(`${winner.name} won!`);
     }
 
-    board = null;
-    for (let player of players) {
-        player.ready = false;
-    }
+    renderLobby();
+    waitForReady();
 });

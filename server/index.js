@@ -11,11 +11,11 @@ const state = {
     players: [],
     board: null, 
     interval: null,
-    dead: []
 };
 
 const buffer = {
     directions: {},
+    lastDirections: {},
 };
 
 function getGameState() {
@@ -34,7 +34,7 @@ io.on('connection', function(socket){
         player = {
             name,
             id: socket.id,
-            ready: false,
+            status: 'waiting',
         };
 
         // Add the player to the state
@@ -51,18 +51,35 @@ io.on('connection', function(socket){
     });
 
     socket.on('playerReady', function () {
-        player.ready = true;
         console.log(`Player ${player.name} is ready`);
+
+        player.status = 'ready';
 
         // Broadcast this to all other players
         socket.broadcast.emit('playerReady', player.name);
 
-        if (state.players.reduce((allReady, p) => allReady && p.ready, true)) {
+        if (
+            state.players.length > 1 &&
+            state.players.reduce((allReady, p) => allReady &&
+            p.status === 'ready', true)
+        ) {
             startGame();
         }
     });
 
-    socket.on('directionUpdate', function (direction){
+    socket.on('directionUpdate', function (direction) {
+        const lastDirection = buffer.lastDirections[socket.id];
+        // Make sure the player only moves in allowed directions
+        if (
+            lastDirection === direction ||
+            lastDirection === 'up' && direction === 'down' ||
+            lastDirection === 'down' && direction === 'up' ||
+            lastDirection === 'left' && direction === 'right' ||
+            lastDirection === 'right' && direction === 'left'
+        ) {
+            return;
+        }
+
         buffer.directions[socket.id] = direction;
     });
 
@@ -72,7 +89,7 @@ io.on('connection', function(socket){
                 state.players.splice(i, 1);
                 console.log(`Player ${player.name} disconnected`);
                 socket.broadcast.emit('playerLeft', player.name);
-                state.dead.push(player.id)
+                player.status = 'dead';
                 break;
             }
         }
@@ -80,11 +97,14 @@ io.on('connection', function(socket){
 });
 
 function startGame() {
-    // TODO: Initialize board here
     initState();
     
     // Emit the game start with the board state to all players
-    io.sockets.emit('gameStart', state.board);
+    state.players.map(player => {
+        player.status = 'playing';
+        return player;
+    });
+    io.sockets.emit('gameStart', getGameState());
     console.log('Game is starting in 3 seconds');
 
     // Start the game interval
@@ -94,21 +114,25 @@ function startGame() {
 }
 
 function gameTick() {
-    // TODO: Update the board here
     updateBoard(state);
 
-    // TODO: Make this more than example code
-    const gameOver = false;
+    let gameOver = state.players.filter(p => p.status === 'playing').length < 2;
     const events = [];
     if (gameOver) {
         clearInterval(state.interval);
-        io.sockets.emit('gameEnd');
 
+        const winner = state.players.find(p => p.status === 'playing').id;
         state.players.map(player => {
-            player.ready = false;
+            player.status = 'waiting';
             return player;
         });
 
+        state.running = false;
+
+        io.sockets.emit('gameEnd', {
+            winner, 
+            state: getGameState(),
+        });
         return;
     }
 
@@ -120,44 +144,44 @@ function gameTick() {
 
 function updateBoard(currentState) {
     for (var i = 0; i < currentState.players.length; i++) {
-        const currentId = currentState.players[i].id;
-        if (currentState.dead.includes(currentId)) {
+        const player = currentState.players[i];
+        if (player.status === 'dead') {
             continue;
         }
-        const direction = buffer.directions[currentId];
-        moveSnake(currentState, direction, currentState.board.snakes[currentId], currentId);
+        const direction = buffer.directions[player.id];
+        moveSnake(currentState, direction, player);
+        buffer.lastDirections[player.id] = direction;
     }
-    return;
 }
 
-function moveSnake(currentState, direction, snake, currentId) {
-    const collision = checkCollision(currentState, snake[0].nextField(direction));
-    snake.unshift(snake[0].nextField(direction));
-    if (!collision.isFruit) {
-        snake.pop();
-    } else {
+function moveSnake(currentState, direction, player) {
+    const snake = currentState.board.snakes[player.id];
+    const position = snake[0].nextField(direction);
+    if (state.board.fruit.equals(position)) {
         refruit(currentState);
+    } else if (checkCollision(currentState, position)) {
+        player.status = 'dead';
+    } else {
+        snake.pop();
     }
-    if (collision.isWall || collision.isSnake) {
-        currentState.dead.push(currentId);
-    }
+
+    snake.unshift(position);
 }
 
 function checkCollision(currentState, position){
-    collision = {};
-    collision.isFruit = state.board.fruit.equals(position);
     if (position.x < 1 || position.y < 1 || position.y >= state.board.height - 1 || position.x >= state.board.width - 1) {
-        collision.isWall = true;
+        return true;
     }
 
     for (const snake in currentState.board.snakes) {
         for (const segment of currentState.board.snakes[snake]) {
             if(position.equals(segment)) {
-                collision.isSnake = true;
+                return true;
             }
         }
     }
-    return collision;
+
+    return false;
 }
 
 function refruit(currentState) {
@@ -170,7 +194,7 @@ function initState() {
         width: 130,
         snakes: {},
         fruit: new Position(-1, -1)
-    }
+    };
 
     const betweeSpace = Math.floor(state.board.width / (state.players.length + 1));
     const verticalMargin = Math.floor((state.board.height - INIT_SNAKE_LENGTH) / 2);
@@ -182,9 +206,11 @@ function initState() {
         const modifier = i % 2 ? 1 : -1;
         let y = verticalMargin;
         buffer.directions[playerId] = 'up';
+        buffer.lastDirections[playerId] = 'up';
         if (!(i % 2)) {
             y = state.board.height - verticalMargin;
             buffer.directions[playerId] = 'down';
+            buffer.lastDirections[playerId] = 'down';
         }
         let maxY = i % 2 ? state.board.height - verticalMargin : verticalMargin;
         state.board.snakes[playerId] = [];
